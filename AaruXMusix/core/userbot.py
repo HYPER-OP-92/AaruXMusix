@@ -1,76 +1,54 @@
 from pyrogram import Client
 import config
 from ..logging import LOGGER
+import asyncio
 
 assistants = []
 assistantids = []
 
 class Userbot(Client):
     def __init__(self):
-        self.clients = []
-        # Hum 1 se 5 tak check karenge ki kitni strings available hain
-        for i in range(1, 6):
-            string = getattr(config, f"STRING{i}", None)
-            if string:
-                client = Client(
-                    name=f"AaruXAss{i}",
-                    api_id=config.API_ID,
-                    api_hash=config.API_HASH,
-                    session_string=str(string),
-                    no_updates=True,
-                )
-                self.clients.append((i, client))
-                # Purane format ke liye compatibility
-                if i == 1: self.one = client
-                elif i == 2: self.two = client
-                elif i == 3: self.three = client
-                elif i == 4: self.four = client
-                elif i == 5: self.five = client
+        self.one = Client(
+            name="AaruXAss1",
+            api_id=config.API_ID,
+            api_hash=config.API_HASH,
+            session_string=str(config.STRING1) if config.STRING1 else None,
+            no_updates=True,
+        )
+        # Add more assistants here if needed (self.two, etc.)
 
     async def start(self):
         LOGGER(__name__).info(f"Starting Assistants...")
         
-        # Logger ID ko number mein badlein
-        try:
-            log_id = int(config.LOGGER_ID)
-        except (ValueError, TypeError):
-            LOGGER(__name__).error("LOGGER_ID galat hai! Please check config.")
-            log_id = None
-
-        for i, client in self.clients:
-            await client.start()
+        if config.STRING1:
+            await self.one.start()
             
-            # Group Join Logic (Dns_Official_Channel)
+            # --- PEER ID INVALID FIX START ---
+            # Hum Assistant ko force karenge ki wo saare groups ki list update kare
             try:
-                await client.join_chat("Dns_Official_Channel")
-            except Exception:
-                pass
+                async for dialog in self.one.get_dialogs(limit=20):
+                    pass 
+                LOGGER(__name__).info("Assistant 1 ki cache sync ho gayi hai.")
+            except Exception as e:
+                LOGGER(__name__).error(f"Sync error: {e}")
+            # ----------------------------------
 
-            # Logger Group Check
-            if log_id:
-                try:
-                    await client.send_message(log_id, f"Assistant {i} Started ✅")
-                except Exception as e:
-                    LOGGER(__name__).error(
-                        f"Assistant {i} log group tak nahi pahunch pa raha. "
-                        f"Reason: {e}"
-                    )
-                    # exit() ko hata diya hai taki bot band na ho
+            try:
+                log_id = int(config.LOGGER_ID)
+                # Assistant se check karwa rahe hain ki kya use group dikh raha hai
+                await self.one.get_chat(log_id) 
+                await self.one.send_message(log_id, "Assistant 1 Online ✅")
+            except Exception as e:
+                LOGGER(__name__).error(f"Assistant 1 abhi bhi log group ko nahi dekh paa raha: {e}")
+                # exit() hata diya taaki bot band na ho
             
-            # Details save karein
-            client.me = await client.get_me()
-            client.id = client.me.id
-            client.name = client.me.mention
-            client.username = client.me.username
-            
-            assistants.append(i)
-            assistantids.append(client.id)
-            LOGGER(__name__).info(f"Assistant {i} Started as {client.name}")
+            self.one.me = await self.one.get_me()
+            self.one.id = self.one.me.id
+            self.one.name = self.one.me.mention
+            assistants.append(1)
+            assistantids.append(self.one.id)
+            LOGGER(__name__).info(f"Assistant Started as {self.one.name}")
 
     async def stop(self):
-        LOGGER(__name__).info(f"Stopping Assistants...")
-        for _, client in self.clients:
-            try:
-                await client.stop()
-            except:
-                pass
+        if config.STRING1:
+            await self.one.stop()
