@@ -1,17 +1,23 @@
-
-
+import asyncio
 import uvloop
 
-uvloop.install()
+# --- LOOP FIX FOR PYTHON 3.10+ ---
+try:
+    uvloop.install()
+except Exception:
+    pass
 
+try:
+    asyncio.get_event_loop()
+except RuntimeError:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+# ---------------------------------
 
 from pyrogram import Client, errors
 from pyrogram.enums import ChatMemberStatus, ParseMode
-
 import config
-
 from ..logging import LOGGER
-
 
 class AaruX(Client):
     def __init__(self):
@@ -35,7 +41,7 @@ class AaruX(Client):
         try:
             await self.send_message(
                 chat_id=config.LOGGER_ID,
-                text=f"<u><b>» {self.mention} ʙᴏᴛ sᴛᴀʀᴛᴇᴅ :</b><u>\n\nɪᴅ : <code>{self.id}</code>\nɴᴀᴍᴇ : {self.name}\nᴜsᴇʀɴᴀᴍᴇ : @{self.username}",
+                text=f"<u><b>» {self.mention} ʙᴏᴛ sᴛᴀʀᴛᴇᴅ :</b></u>\n\nɪᴅ : <code>{self.id}</code>\nɴᴀᴍᴇ : {self.name}\nᴜsᴇʀɴᴀᴍᴇ : @{self.username}",
             )
         except (errors.ChannelInvalid, errors.PeerIdInvalid):
             LOGGER(__name__).error(
