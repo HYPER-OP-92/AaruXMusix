@@ -14,6 +14,7 @@ from config import BANNED_USERS
 
 
 async def init():
+    # Check if strings are provided
     if (
         not config.STRING1
         and not config.STRING2
@@ -23,7 +24,10 @@ async def init():
     ):
         LOGGER(__name__).error("𝐒𝐭𝐫𝐢𝐧𝐠 𝐒𝐞𝐬𝐬𝐢𝐨𝐧 𝐍𝐨𝐭 𝐅𝐢𝐥𝐥𝐞𝐝, 𝐏𝐥𝐞𝐚𝐬𝐞 𝐅𝐢𝐥𝐥 𝐀 𝐏𝐲𝐫𝐨𝐠𝐫𝐚𝐦 𝐒𝐞𝐬𝐬𝐢𝐨𝐧")
         exit()
+
     await sudo()
+
+    # Load Banned Users
     try:
         users = await get_gbanned()
         for user_id in users:
@@ -31,27 +35,52 @@ async def init():
         users = await get_banned_users()
         for user_id in users:
             BANNED_USERS.add(user_id)
-    except:
+    except Exception:
         pass
+
+    # Start Bot (app)
     await app.start()
+    LOGGER("AaruXMusix").info("Bot Started ✅")
+
+    # Load Plugins
     for all_module in ALL_MODULES:
         importlib.import_module("AaruXMusix.plugins" + all_module)
     LOGGER("AaruXMusix.plugins").info("𝐀𝐥𝐥 𝐅𝐞𝐚𝐭𝐮𝐫𝐞𝐬 𝐋𝐨𝐚𝐝𝐞𝐝 𝐁𝐚𝐛𝐲🥳...")
+
+    # Start Assistant (Userbot)
     await userbot.start()
+    
+    # --- PROPER SYNC FIX ---
+    # Assistant ko group ke details fetch karne ke liye thoda waqt dena zaroori hai
+    LOGGER("AaruXMusix").info("Assistant sync ho raha hai... 7 second rukein.")
+    await asyncio.sleep(7) 
+    
+    # Start PyTgCalls (Music Core)
     await AaruXMusix.start()
+
+    # Stream Check in Log Group
     try:
         await AaruXMusix.stream_call("https://te.legra.ph/file/29f784eb49d230ab62e9e.mp4")
     except NoActiveGroupCall:
         LOGGER("AaruXMusix").error(
-            "𝗣𝗹𝗭 𝗦𝗧𝗔𝗥𝗧 𝗬𝗢𝗨𝗥 𝗟𝗢𝗚 𝗚𝗥𝗢𝗨𝗣 𝗩𝗢𝗜𝗖𝗘𝗖𝗛𝗔𝗧\𝗖𝗛𝗔𝗡𝗡𝗘𝗟\n\n𝗥𝗨𝗗𝗥𝗔 𝗕𝗢𝗧 𝗦𝗧𝗢𝗣........"
+            "\n\n❌ ERROR: LOG GROUP ME VOICE CHAT NAHI MILI!\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "1. Check karein ki Log Group me Voice Chat ON hai.\n"
+            "2. Check karein ki ASSISTANT group me ADMIN hai.\n"
+            "3. Admin permissions me 'MANAGE VIDEO CHATS' ON hona chahiye.\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         )
         exit()
-    except:
-        pass
+    except Exception as e:
+        LOGGER("AaruXMusix").error(f"Startup Call Error: {e}")
+        # Agar koi aur badi error ho tabhi band karein
+        exit()
+
     await AaruXMusix.decorators()
     LOGGER("AaruXMusix").info(
         "╔═════ஜ۩۞۩ஜ════╗\n  ☠︎︎𝗠𝗔𝗗𝗘 𝗕𝗬 𝗠𝗥 𝗥𝗨𝗗𝗥𝗔☠︎︎\n╚═════ஜ۩۞۩ஜ════╝"
     )
+    
     await idle()
     await app.stop()
     await userbot.stop()
@@ -59,4 +88,6 @@ async def init():
 
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(init())
+    # Python 3.10+ loop correction
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(init())
