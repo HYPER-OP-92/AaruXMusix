@@ -1,7 +1,12 @@
 import asyncio
 import uvloop
+from pyrogram import Client, errors
+from pyrogram.enums import ChatMemberStatus, ParseMode
 
-# --- LOOP FIX FOR PYTHON 3.10+ ---
+import config
+from ..logging import LOGGER
+
+# --- EVENT LOOP FIX (FOR PYTHON 3.10+) ---
 try:
     uvloop.install()
 except Exception:
@@ -12,12 +17,7 @@ try:
 except RuntimeError:
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-# ---------------------------------
-
-from pyrogram import Client, errors
-from pyrogram.enums import ChatMemberStatus, ParseMode
-import config
-from ..logging import LOGGER
+# -----------------------------------------
 
 class AaruX(Client):
     def __init__(self):
@@ -38,9 +38,21 @@ class AaruX(Client):
         self.username = self.me.username
         self.mention = self.me.mention
 
+        # --- LOGGER ID FIX (VALUEERROR FIX) ---
+        try:
+            # Agar ID string mein hai to use number (int) mein convert karega
+            if config.LOGGER_ID:
+                log_chat_id = int(config.LOGGER_ID)
+            else:
+                LOGGER(__name__).error("LOGGER_ID config file mein missing hai!")
+                exit()
+        except ValueError:
+            LOGGER(__name__).error("ValueError: LOGGER_ID ek sahi number hona chahiye (Example: -10012345678).")
+            exit()
+
         try:
             await self.send_message(
-                chat_id=config.LOGGER_ID,
+                chat_id=log_chat_id,
                 text=f"<u><b>» {self.mention} ʙᴏᴛ sᴛᴀʀᴛᴇᴅ :</b></u>\n\nɪᴅ : <code>{self.id}</code>\nɴᴀᴍᴇ : {self.name}\nᴜsᴇʀɴᴀᴍᴇ : @{self.username}",
             )
         except (errors.ChannelInvalid, errors.PeerIdInvalid):
@@ -54,12 +66,17 @@ class AaruX(Client):
             )
             exit()
 
-        a = await self.get_chat_member(config.LOGGER_ID, self.id)
-        if a.status != ChatMemberStatus.ADMINISTRATOR:
-            LOGGER(__name__).error(
-                "Please promote your bot as an admin in your log group/channel."
-            )
+        try:
+            a = await self.get_chat_member(log_chat_id, self.id)
+            if a.status != ChatMemberStatus.ADMINISTRATOR:
+                LOGGER(__name__).error(
+                    "Please promote your bot as an admin in your log group/channel."
+                )
+                exit()
+        except Exception as e:
+            LOGGER(__name__).error(f"Chat Member check failed: {e}")
             exit()
+
         LOGGER(__name__).info(f"Music Bot Started as {self.name}")
 
     async def stop(self):
