@@ -1,9 +1,7 @@
 import asyncio
 import importlib
-
 from pyrogram import idle
 from pytgcalls.exceptions import NoActiveGroupCall
-
 import config
 from AaruXMusix import LOGGER, app, userbot
 from AaruXMusix.core.call import AaruXMusix
@@ -12,97 +10,73 @@ from AaruXMusix.plugins import ALL_MODULES
 from AaruXMusix.utils.database import get_banned_users, get_gbanned
 from config import BANNED_USERS
 
-
 async def init():
-    # 1. String Session Check
-    if (
-        not config.STRING1
-        and not config.STRING2
-        and not config.STRING3
-        and not config.STRING4
-        and not config.STRING5
-    ):
-        LOGGER(__name__).error("𝐒𝐭𝐫𝐢𝐧𝐠 𝐒𝐞𝐬𝐬𝐢𝐨𝐧 𝐍𝐨𝐭 𝐅𝐢𝐥𝐥𝐞𝐝, 𝐏𝐥𝐞𝐚𝐬𝐞 𝐅𝐢𝐥𝐥 𝐀 𝐏𝐲𝐫𝐨𝐠𝐫𝐚𝐦 𝐒𝐞𝐬𝐬𝐢𝐨𝐧")
+    # 1. Essential checks
+    if not config.STRING1:
+        LOGGER(__name__).error("STRING1 missing!")
         exit()
 
-    # 2. Sudo and Database Load
     await sudo()
-    try:
-        users = await get_gbanned()
-        for user_id in users:
-            BANNED_USERS.add(user_id)
-        users = await get_banned_users()
-        for user_id in users:
-            BANNED_USERS.add(user_id)
-    except Exception:
-        pass
 
-    # 3. Main Bot (app) Start
+    # 2. Start Main Bot (API)
     await app.start()
-    LOGGER("AaruXMusix").info("Main Bot Started ✅")
+    LOGGER("AaruXMusix").info("Main Bot Started. Checking Log Group...")
 
-    # 4. Main Bot Permission Test (Log Group Check)
+    # --- NUCLEAR DEBUG START (Isse pata chal jayega asli galti kya hai) ---
     try:
-        await app.send_message(
-            config.LOGGER_ID, 
-            "✨ **Main Bot Online!**\n\nAb Assistant start ho raha hai, thoda intezaar karein..."
-        )
-        LOGGER("AaruXMusix").info("Main Bot ne Log Group mein startup message bhej diya hai.")
-    except Exception as e:
-        LOGGER("AaruXMusix").error(
-            f"Main Bot Log Group me message nahi bhej pa raha!\n"
-            f"Reason: {e}\n"
-            f"Fix: Bot ko Log Group me Admin banayein."
-        )
-        # Hum bot ko band nahi karenge, shayad assistant bhej sake, par error dikhayenge.
+        # 1. ID ko saaf karein (Spaces hatayein)
+        raw_id = str(config.LOGGER_ID).strip()
+        log_id = int(raw_id)
 
-    # 5. Load Plugins
+        # 2. Bot se kahein ki wo Group ki details nikaale (Sync)
+        LOGGER("AaruXMusix").info(f"Checking access for ID: {log_id}...")
+        chat = await app.get_chat(log_id)
+        
+        # 3. Message bhejne ki koshish
+        await app.send_message(
+            log_id, 
+            f"✅ **Bot Online Ho Gaya Hai!**\n\n**Group Name:** {chat.title}\n**Bot Admin Hai:** Haan"
+        )
+        LOGGER("AaruXMusix").info(f"SUCCESS: Bot ne '{chat.title}' mein message bhej diya!")
+
+    except Exception as e:
+        # Yahan terminal par asli Error dikhega
+        LOGGER("AaruXMusix").error(f"DETAILED ERROR: {e}")
+        print(f"\n--- DEBUG INFO ---")
+        print(f"Config ID: {config.LOGGER_ID}")
+        print(f"Error Type: {type(e).__name__}")
+        print(f"------------------\n")
+    # --- DEBUG END ---
+
+    # 3. Load Plugins
     for all_module in ALL_MODULES:
         importlib.import_module("AaruXMusix.plugins" + all_module)
-    LOGGER("AaruXMusix.plugins").info("𝐀𝐥𝐥 𝐅𝐞𝐚𝐭𝐮𝐫𝐞𝐬 𝐋𝐨𝐚𝐝𝐞𝐝 𝐁𝐚𝐛𝐲🥳...")
-
-    # 6. Start Assistant (Userbot)
+    
+    # 4. Start Assistant
     await userbot.start()
     
-    # --- VC SYNC DELAY (IMPORTANT) ---
-    LOGGER("AaruXMusix").info("Assistant sync ho raha hai... 7 second rukein.")
-    await asyncio.sleep(7) 
+    # Wait for sync
+    await asyncio.sleep(5)
     
-    # Start Music Core (PyTgCalls)
     await AaruXMusix.start()
 
-    # 7. Voice Chat Detection Check
+    # 5. Voice Chat Check
     try:
-        # Check if VC is active in the Log Group
         await AaruXMusix.stream_call("https://te.legra.ph/file/29f784eb49d230ab62e9e.mp4")
     except NoActiveGroupCall:
-        LOGGER("AaruXMusix").error(
-            "\n\n❌ ERROR: LOG GROUP ME VOICE CHAT NAHI MILI!\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "FIX: Apne Log Group me Voice Chat ON karein aur Assistant ko Admin banayein.\n"
-            "Bot ab band ho raha hai kyunki bypass allowed nahi hai.\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        )
+        LOGGER("AaruXMusix").error("Log Group Voice Chat On Nahi Hai!")
         exit()
     except Exception as e:
-        LOGGER("AaruXMusix").error(f"Startup Call Error: {e}")
+        LOGGER("AaruXMusix").error(f"VC Error: {e}")
         exit()
 
     await AaruXMusix.decorators()
-    LOGGER("AaruXMusix").info(
-        "╔═════ஜ۩۞۩ஜ════╗\n  ☠︎︎𝗠𝗔𝗗𝗘 𝗕𝗬 𝗠𝗥 𝗥𝗨𝗗𝗥𝗔☠︎︎\n╚═════ஜ۩۞۩ஜ════╝"
-    )
+    LOGGER("AaruXMusix").info("Rudra Music Bot Started!")
     
-    # Keep bot running
     await idle()
-    
-    # Stop all services on shutdown
     await app.stop()
     await userbot.stop()
-    LOGGER("AaruXMusix").info("𝗦𝗧𝗢𝗣 𝗥𝗨𝗗𝗥𝗔 𝗠𝗨𝗦𝗜𝗖🎻 𝗕𝗢𝗧..")
-
 
 if __name__ == "__main__":
-    # Python 3.10+ event loop fix
     loop = asyncio.get_event_loop()
     loop.run_until_complete(init())
